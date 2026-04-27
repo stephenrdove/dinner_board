@@ -732,7 +732,14 @@
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // Config stored in localStorage (device-specific, intentional)
 function getConfig() {
-  try { return JSON.parse(localStorage.getItem('dinnerboard_config') || '{}'); } catch { return {}; }
+  const defaults = {
+    workerUrl: 'https://dinnerboard.stephendove-tarot.workers.dev',
+    authToken: 'ee10f2c2192b893c84e30da4cff8f55574a26606733b4b8e',
+  };
+  try {
+    const stored = JSON.parse(localStorage.getItem('dinnerboard_config') || '{}');
+    return (stored.workerUrl && stored.authToken) ? stored : defaults;
+  } catch { return defaults; }
 }
 function setConfig(cfg) {
   localStorage.setItem('dinnerboard_config', JSON.stringify(cfg));

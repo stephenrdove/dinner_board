@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding = "DINNERBOARD"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "d2dc84d2d362401184b44503a88aae87"
 
 # Set AUTH_TOKEN as a secret, not here:
 # wrangler secret put AUTH_TOKEN
