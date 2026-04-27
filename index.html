@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Meal Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --surface2: #f3f0ea;
+    --border: #e8e2d8;
+    --text: #2a2520;
+    --text2: #7a6e65;
+    --accent: #c17f47;
+    --accent-light: #f7ede0;
+    --accent-dark: #9e6535;
+    --green: #5a8a5e;
+    --green-light: #eaf2eb;
+    --red: #c0544f;
+    --red-light: #fbeaea;
+    --shadow: 0 2px 12px rgba(42,37,32,0.08);
+    --shadow-lg: 0 8px 32px rgba(42,37,32,0.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #1a1714;
+    --surface: #252118;
+    --surface2: #2e2920;
+    --border: #3a3428;
+    --text: #f0ebe3;
+    --text2: #9a9088;
+    --accent: #d4965a;
+    --accent-light: #2e2318;
+    --accent-dark: #e8aa74;
+    --green: #6fa874;
+    --green-light: #1a2e1c;
+    --red: #d4706b;
+    --red-light: #2e1a1a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* SYNC INDICATOR */
+  #sync-indicator {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px 6px 10px;
+    font-size: 12px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #sync-indicator.show { opacity: 1; pointer-events: auto; }
+  #sync-indicator.saving { color: var(--accent); border-color: var(--accent); }
+  #sync-indicator.saved { color: var(--green); border-color: var(--green); }
+  #sync-indicator.error { color: var(--red); border-color: var(--red); cursor: pointer; }
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .sync-dot.spinning {
+    animation: spin 1s linear infinite;
+    border-radius: 0;
+    width: 8px; height: 8px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    background: transparent;
+    border-radius: 50%;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CONFIG BANNER */
+  #config-banner {
+    background: var(--accent-light);
+    border-bottom: 1px solid var(--accent);
+    padding: 10px 24px;
+    font-size: 13px;
+    color: var(--accent-dark);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  #config-banner.hidden { display: none; }
+  #config-banner a { color: var(--accent-dark); font-weight: 500; }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text); }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab-btn {
+    padding: 7px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .panel-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  #view-calendar { display: block; }
+  #view-grocery { display: none; }
+  #view-import { display: none; }
+  #view-settings { display: none; }
+
+  .week-label {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 18px 22px 10px;
+  }
+
+  .day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+  @media (max-width: 700px) {
+    .day-grid { grid-template-columns: 1fr 1fr; }
+    .tab-btn { padding: 6px 10px; font-size: 12px; }
+    header { padding: 0 14px; }
+    .logo { font-size: 18px; }
+    main { padding: 16px 12px; }
+  }
+
+  .day-card {
+    background: var(--surface);
+    padding: 14px 14px 16px;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .day-card:hover { background: var(--accent-light); }
+  .day-name {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+  .day-number {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text);
+    line-height: 1;
+  }
+  .meal-chip {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.4;
+    flex: 1;
+  }
+  .meal-chip.leftover { color: var(--green); font-style: italic; }
+  .meal-chip.empty { color: var(--text2); font-style: italic; }
+  .meal-note {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.3;
+    border-left: 2px solid var(--border);
+    padding-left: 6px;
+  }
+  .edit-hint {
+    position: absolute;
+    bottom: 8px; right: 10px;
+    font-size: 10px;
+    color: var(--border);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .day-card:hover .edit-hint { opacity: 1; }
+
+  /* GROCERY */
+  .grocery-section { padding: 6px 0; }
+  .grocery-category {
+    padding: 14px 22px 6px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .grocery-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 22px;
+    border-top: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  .grocery-item:hover { background: var(--surface2); }
+  .grocery-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .grocery-item label {
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    flex: 1;
+    transition: color 0.15s;
+  }
+  .grocery-item.checked label {
+    text-decoration: line-through;
+    color: var(--text2);
+  }
+  .grocery-warn {
+    font-size: 10px;
+    color: var(--accent);
+    background: var(--accent-light);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+  }
+  .grocery-item .del-btn {
+    opacity: 0;
+    border: none;
+    background: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: opacity 0.15s;
+  }
+  .grocery-item:hover .del-btn { opacity: 1; }
+
+  .add-item-row {
+    display: flex;
+    gap: 8px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    flex-wrap: wrap;
+  }
+  .add-item-row input, .add-item-row select {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .add-item-row input:focus, .add-item-row select:focus { border-color: var(--accent); }
+  .add-item-row select { flex: 0 0 160px; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--red-light); color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: white; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-footer {
+    padding: 14px 24px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  label.field-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text2);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .field-group { display: flex; flex-direction: column; }
+  .field-group input, .field-group textarea, .field-group select {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+  .field-group input:focus, .field-group textarea:focus, .field-group select:focus { border-color: var(--accent); }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .checkbox-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  /* IMPORT */
+  .import-zone { padding: 22px; }
+  .import-zone textarea {
+    width: 100%;
+    min-height: 280px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.15s;
+  }
+  .import-zone textarea:focus { border-color: var(--accent); }
+  .import-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+  .import-status { font-size: 13px; flex: 1; }
+  .import-status.ok { color: var(--green); }
+  .import-status.err { color: var(--red); }
+
+  .schema-box {
+    margin: 0 22px 22px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+  .schema-box pre {
+    font-size: 11px;
+    color: var(--text2);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-family: 'Courier New', monospace;
+  }
+  .schema-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  /* SETTINGS */
+  .settings-section { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+  .settings-row { display: flex; flex-direction: column; gap: 6px; }
+  .settings-row .field-group input {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+  .settings-hint { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .settings-status { font-size: 13px; margin-top: 4px; }
+  .settings-status.ok { color: var(--green); }
+  .settings-status.err { color: var(--red); }
+
+  .clear-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 22px;
+    background: var(--red-light);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--red);
+    flex-wrap: wrap;
+  }
+
+  /* LOADING OVERLAY */
+  #loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity 0.4s;
+  }
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .loading-text { font-size: 14px; color: var(--text2); }
+  .loading-spinner {
+    width: 24px; height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="loading-logo">🍽 DinnerBoard</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Loading your meal plan...</div>
+</div>
+
+<!-- CONFIG BANNER -->
+<div id="config-banner" class="hidden">
+  ⚙️ Worker not configured — running in local-only mode.
+  <a href="#" onclick="showView('settings');return false">Configure sync →</a>
+</div>
+
+<header>
+  <div class="logo">🍽 <span>Dinner</span>Board</div>
+  <div class="header-actions">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showView('calendar')">Calendar</button>
+      <button class="tab-btn" onclick="showView('grocery')">Groceries</button>
+      <button class="tab-btn" onclick="showView('import')">Import</button>
+      <button class="tab-btn" onclick="showView('settings')">⚙️</button>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">🌙</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- CALENDAR -->
+  <div id="view-calendar">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Two-Week Meal Plan</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="shiftWeeks(-1)">← Prev</button>
+          <button class="btn btn-ghost" id="period-label" onclick="goToToday()">This Fortnight</button>
+          <button class="btn btn-ghost" onclick="shiftWeeks(1)">Next →</button>
+        </div>
+      </div>
+      <div class="week-label">Week 1</div>
+      <div class="day-grid" id="week1-grid"></div>
+      <div class="week-label" style="border-top:1px solid var(--border)">Week 2</div>
+      <div class="day-grid" id="week2-grid"></div>
+    </div>
+  </div>
+
+  <!-- GROCERY -->
+  <div id="view-grocery">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Grocery List</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="clearChecked()">Clear checked</button>
+          <button class="btn btn-danger" onclick="confirmClearAll()">Clear all</button>
+        </div>
+      </div>
+      <div id="clear-bar" style="display:none" class="clear-bar">
+        Are you sure? This will remove all grocery items.
+        <button class="btn btn-danger" onclick="clearAllItems()" style="padding:4px 12px;font-size:12px">Yes, clear</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('clear-bar').style.display='none'" style="padding:4px 12px;font-size:12px">Cancel</button>
+      </div>
+      <div id="grocery-list"></div>
+      <div class="add-item-row">
+        <select id="new-item-cat">
+          <option value="Produce">Produce</option>
+          <option value="Meat & Seafood">Meat & Seafood</option>
+          <option value="Dairy & Eggs">Dairy & Eggs</option>
+          <option value="Frozen">Frozen</option>
+          <option value="Pantry / Dry Goods">Pantry / Dry Goods</option>
+          <option value="Canned Goods">Canned Goods</option>
+          <option value="Condiments & Sauces">Condiments & Sauces</option>
+          <option value="Other">Other</option>
+        </select>
+        <input type="text" id="new-item-text" placeholder="Add grocery item..." onkeydown="if(event.key==='Enter')addGroceryItem()">
+        <label class="checkbox-row" style="white-space:nowrap;font-size:12px;gap:5px">
+          <input type="checkbox" id="new-item-warn"> ⚠️ GF
+        </label>
+        <button class="btn btn-primary" onclick="addGroceryItem()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT -->
+  <div id="view-import">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Import Meal Plan JSON</span>
+      </div>
+      <div class="import-zone">
+        <label class="field-label">Paste your Claude-generated JSON here</label>
+        <textarea id="import-json" placeholder='{ "weeks": [ ... ] }'></textarea>
+        <div class="import-actions">
+          <span class="import-status" id="import-status"></span>
+          <button class="btn btn-ghost" onclick="document.getElementById('import-json').value=''">Clear</button>
+          <button class="btn btn-primary" onclick="importJSON()">Import Plan</button>
+        </div>
+      </div>
+      <div class="schema-box">
+        <div class="schema-title">Expected JSON Schema</div>
+        <pre id="schema-example"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="view-settings">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Sync Settings</span>
+      </div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <label class="field-label">Cloudflare Worker URL</label>
+          <div class="field-group">
+            <input type="url" id="cfg-worker-url" placeholder="https://dinnerboard.yourname.workers.dev">
+          </div>
+          <div class="settings-hint">Your deployed Worker URL — no trailing slash.</div>
+        </div>
+        <div class="settings-row">
+          <label class="field-label">Auth Token</label>
+          <div class="field-group">
+            <input type="password" id="cfg-auth-token" placeholder="Your secret token">
+          </div>
+          <div class="settings-hint">Must match the AUTH_TOKEN secret set on your Worker via <code>wrangler secret put AUTH_TOKEN</code>.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveConfig()">Save & Test Connection</button>
+          <button class="btn btn-ghost" onclick="clearConfig()">Clear Config</button>
+          <span class="settings-status" id="cfg-status"></span>
+        </div>
+        <div class="settings-hint" style="border-top:1px solid var(--border);padding-top:16px">
+          <strong>Setup checklist:</strong><br>
+          1. Create a KV namespace named <code>DINNERBOARD</code> in Cloudflare dashboard<br>
+          2. Deploy <code>worker.js</code> with <code>wrangler deploy</code><br>
+          3. Run <code>wrangler secret put AUTH_TOKEN</code> and enter your token<br>
+          4. Paste your Worker URL and token above, then click Save & Test
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-day-label">Edit Day</span>
+      <button class="icon-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Meal Name</label>
+        <input type="text" id="modal-meal" placeholder="e.g. Chicken tacos with corn tortillas">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Notes (optional)</label>
+        <textarea id="modal-notes" rows="2" placeholder="e.g. Double batch for leftovers Thursday"></textarea>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="modal-leftover">
+        <label for="modal-leftover">Mark as leftover / simple night</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="clearDay()">Clear day</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDay()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC INDICATOR -->
+<div id="sync-indicator">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-text">Saving...</span>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// Config stored in localStorage (device-specific, intentional)
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem('dinnerboard_config') || '{}'); } catch { return {}; }
+}
+function setConfig(cfg) {
+  localStorage.setItem('dinnerboard_config', JSON.stringify(cfg));
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = { meals: {}, grocery: [], theme: 'light' };
+let currentEditKey = null;
+let fortnightOffset = 0;
+let saveTimer = null;
+
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+function workerUrl() {
+  const cfg = getConfig();
+  return cfg.workerUrl ? cfg.workerUrl.replace(/\/$/, '') : null;
+}
+function authToken() {
+  return getConfig().authToken || null;
+}
+function isConfigured() {
+  return !!(workerUrl() && authToken());
+}
+
+function showSync(status, message) {
+  const el = document.getElementById('sync-indicator');
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  el.className = 'sync-indicator show ' + status;
+  dot.className = 'sync-dot' + (status === 'saving' ? ' spinning' : '');
+  text.textContent = message;
+  if (status === 'saved') {
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+}
+
+async function loadFromWorker() {
+  if (!isConfigured()) return false;
+  try {
+    const res = await fetch(workerUrl() + '/state', {
+      headers: { 'X-Auth-Token': authToken() }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    state = { meals: {}, grocery: [], theme: 'light', ...data };
+    return true;
+  } catch(e) {
+    console.error('Load failed:', e);
+    return false;
+  }
+}
+
+async function saveToWorker() {
+  if (!isConfigured()) {
+    // Fall back to localStorage
+    localStorage.setItem('dinnerboard_local', JSON.stringify(state));
+    return;
+  }
+  showSync('saving', 'Saving...');
+  try {
+    const res = await fetch(workerUrl() + '/state', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': authToken(),
+      },
+      body: JSON.stringify(state),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showSync('saved', 'Saved ✓');
+  } catch(e) {
+    showSync('error', 'Sync failed — tap to retry');
+    document.getElementById('sync-indicator').onclick = () => saveToWorker();
+  }
+}
+
+// Debounced save — waits 800ms after last change before writing
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToWorker, 800);
+}
+
+// ─── THEME ────────────────────────────────────────────────────────────────────
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', state.theme || 'light');
+  document.getElementById('theme-btn').textContent = state.theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  applyTheme();
+  scheduleSave();
+}
+
+// ─── VIEWS ────────────────────────────────────────────────────────────────────
+const VIEWS = ['calendar','grocery','import','settings'];
+function showView(name) {
+  VIEWS.forEach(v => {
+    document.getElementById('view-'+v).style.display = v === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', VIEWS[i] === name);
+  });
+  if (name === 'calendar') renderCalendar();
+  if (name === 'grocery') renderGrocery();
+  if (name === 'settings') loadConfigUI();
+}
+
+// ─── CALENDAR ─────────────────────────────────────────────────────────────────
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function getFortnightStart() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay());
+  sunday.setDate(sunday.getDate() + fortnightOffset * 14);
+  return sunday;
+}
+
+function dateKey(d) { return d.toISOString().slice(0,10); }
+function goToToday() { fortnightOffset = 0; renderCalendar(); }
+function shiftWeeks(dir) { fortnightOffset += dir; renderCalendar(); }
+
+function renderCalendar() {
+  const start = getFortnightStart();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const end = new Date(start); end.setDate(end.getDate() + 13);
+  const fmt = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  document.getElementById('period-label').textContent = `${fmt(start)} – ${fmt(end)}`;
+
+  ['week1-grid','week2-grid'].forEach((gridId, weekIdx) => {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + weekIdx * 7 + d);
+      const key = dateKey(date);
+      const meal = state.meals[key] || {};
+      const isToday = date.getTime() === today.getTime();
+
+      const card = document.createElement('div');
+      card.className = 'day-card';
+      if (isToday) card.style.background = 'var(--accent-light)';
+
+      const mealText = meal.name
+        ? `<div class="meal-chip ${meal.leftover ? 'leftover' : ''}">${meal.leftover ? '↩ ' : ''}${meal.name}</div>`
+        : `<div class="meal-chip empty">tap to add</div>`;
+      const noteText = meal.notes ? `<div class="meal-note">${meal.notes}</div>` : '';
+
+      card.innerHTML = `
+        <div class="day-name">${DAYS[date.getDay()]}</div>
+        <div class="day-number">${date.getDate()}</div>
+        ${mealText}${noteText}
+        <span class="edit-hint">✎ edit</span>
+      `;
+      card.onclick = () => openModal(key, date);
+      grid.appendChild(card);
+    }
+  });
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(key, date) {
+  currentEditKey = key;
+  const meal = state.meals[key] || {};
+  const label = date.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+  document.getElementById('modal-day-label').textContent = label;
+  document.getElementById('modal-meal').value = meal.name || '';
+  document.getElementById('modal-notes').value = meal.notes || '';
+  document.getElementById('modal-leftover').checked = !!meal.leftover;
+  document.getElementById('edit-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-meal').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  currentEditKey = null;
+}
+
+function saveDay() {
+  if (!currentEditKey) return;
+  const name = document.getElementById('modal-meal').value.trim();
+  if (name) {
+    state.meals[currentEditKey] = {
+      name,
+      notes: document.getElementById('modal-notes').value.trim(),
+      leftover: document.getElementById('modal-leftover').checked,
+    };
+  } else {
+    delete state.meals[currentEditKey];
+  }
+  scheduleSave();
+  closeModal();
+  renderCalendar();
+}
+
+function clearDay() {
+  if (!currentEditKey) return;
+  delete state.meals[currentEditKey];
+  scheduleSave();
+  closeModal();
+  renderCalendar();
+}
+
+document.getElementById('edit-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('edit-modal')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─── GROCERY ──────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  'Produce','Meat & Seafood','Dairy & Eggs','Frozen',
+  'Pantry / Dry Goods','Canned Goods','Condiments & Sauces','Other'
+];
+
+function renderGrocery() {
+  const list = document.getElementById('grocery-list');
+  list.innerHTML = '';
+  const grouped = {};
+  CATEGORIES.forEach(c => grouped[c] = []);
+  (state.grocery || []).forEach(item => {
+    const cat = grouped[item.category] ? item.category : 'Other';
+    grouped[cat].push(item);
+  });
+  let anyItems = false;
+  CATEGORIES.forEach(cat => {
+    const items = grouped[cat];
+    if (!items.length) return;
+    anyItems = true;
+    const sec = document.createElement('div');
+    sec.className = 'grocery-section';
+    sec.innerHTML = `<div class="grocery-category">${cat}</div>`;
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'grocery-item' + (item.checked ? ' checked' : '');
+      row.innerHTML = `
+        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleItem('${item.id}')">
+        <label onclick="toggleItem('${item.id}')">${item.name}</label>
+        ${item.warn ? '<span class="grocery-warn">⚠️ buy GF</span>' : ''}
+        <button class="del-btn" onclick="deleteItem('${item.id}')">✕</button>
+      `;
+      sec.appendChild(row);
+    });
+    list.appendChild(sec);
+  });
+  if (!anyItems) {
+    list.innerHTML = '<div style="padding:32px 22px;color:var(--text2);font-style:italic;font-size:14px">No items yet. Add below or import a meal plan.</div>';
+  }
+}
+
+function addGroceryItem() {
+  const text = document.getElementById('new-item-text').value.trim();
+  const cat = document.getElementById('new-item-cat').value;
+  const warn = document.getElementById('new-item-warn').checked;
+  if (!text) return;
+  if (!state.grocery) state.grocery = [];
+  state.grocery.push({
+    id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+    name: text, category: cat, checked: false, warn,
+  });
+  scheduleSave();
+  document.getElementById('new-item-text').value = '';
+  document.getElementById('new-item-warn').checked = false;
+  renderGrocery();
+}
+
+function toggleItem(id) {
+  const item = (state.grocery || []).find(g => g.id === id);
+  if (item) { item.checked = !item.checked; scheduleSave(); renderGrocery(); }
+}
+
+function deleteItem(id) {
+  state.grocery = (state.grocery || []).filter(g => g.id !== id);
+  scheduleSave(); renderGrocery();
+}
+
+function clearChecked() {
+  state.grocery = (state.grocery || []).filter(g => !g.checked);
+  scheduleSave(); renderGrocery();
+}
+
+function confirmClearAll() {
+  document.getElementById('clear-bar').style.display = 'flex';
+}
+
+function clearAllItems() {
+  state.grocery = [];
+  scheduleSave();
+  document.getElementById('clear-bar').style.display = 'none';
+  renderGrocery();
+}
+
+// ─── IMPORT ───────────────────────────────────────────────────────────────────
+const SCHEMA = {
+  weeks: [{ week: 1, days: [
+    { date: "2026-04-27", meal: "Chicken tacos", notes: "Double batch — leftovers Thursday", leftover: false },
+    { date: "2026-04-28", meal: "Leftover tacos", notes: "", leftover: true }
+  ]}],
+  grocery: [
+    { category: "Produce", name: "Avocados", warn: false },
+    { category: "Condiments & Sauces", name: "Tamari (soy sauce)", warn: true }
+  ]
+};
+document.getElementById('schema-example').textContent = JSON.stringify(SCHEMA, null, 2);
+
+function importJSON() {
+  const raw = document.getElementById('import-json').value.trim();
+  const status = document.getElementById('import-status');
+  try {
+    const data = JSON.parse(raw);
+    let mealCount = 0, groceryCount = 0;
+    if (data.weeks && Array.isArray(data.weeks)) {
+      data.weeks.forEach(week => {
+        (week.days || []).forEach(day => {
+          if (day.date && day.meal) {
+            state.meals[day.date] = { name: day.meal, notes: day.notes || '', leftover: !!day.leftover };
+            mealCount++;
+          }
+        });
+      });
+    }
+    if (data.grocery && Array.isArray(data.grocery)) {
+      if (!state.grocery) state.grocery = [];
+      data.grocery.forEach(item => {
+        if (item.name && item.category) {
+          state.grocery.push({
+            id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            name: item.name, category: item.category, checked: false, warn: !!item.warn,
+          });
+          groceryCount++;
+        }
+      });
+    }
+    scheduleSave();
+    status.className = 'import-status ok';
+    status.textContent = `✓ Imported ${mealCount} meals and ${groceryCount} grocery items`;
+    if (mealCount > 0) setTimeout(() => showView('calendar'), 1200);
+  } catch(e) {
+    status.className = 'import-status err';
+    status.textContent = '✕ Invalid JSON — ' + e.message;
+  }
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+function loadConfigUI() {
+  const cfg = getConfig();
+  document.getElementById('cfg-worker-url').value = cfg.workerUrl || '';
+  document.getElementById('cfg-auth-token').value = cfg.authToken || '';
+  document.getElementById('cfg-status').textContent = '';
+}
+
+async function saveConfig() {
+  const url = document.getElementById('cfg-worker-url').value.trim();
+  const token = document.getElementById('cfg-auth-token').value.trim();
+  const status = document.getElementById('cfg-status');
+  if (!url || !token) { status.className = 'settings-status err'; status.textContent = 'Both fields required'; return; }
+  status.className = 'settings-status'; status.textContent = 'Testing...';
+  try {
+    const res = await fetch(url.replace(/\/$/, '') + '/state', { headers: { 'X-Auth-Token': token } });
+    if (res.status === 401) throw new Error('Invalid token');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setConfig({ workerUrl: url, authToken: token });
+    document.getElementById('config-banner').classList.add('hidden');
+    status.className = 'settings-status ok';
+    status.textContent = '✓ Connected! Reloading state...';
+    // Merge remote state
+    const data = await res.json();
+    state = { meals: {}, grocery: [], theme: state.theme, ...data };
+    applyTheme();
+    renderCalendar();
+    setTimeout(() => showView('calendar'), 1000);
+  } catch(e) {
+    status.className = 'settings-status err';
+    status.textContent = '✕ ' + e.message;
+  }
+}
+
+function clearConfig() {
+  localStorage.removeItem('dinnerboard_config');
+  loadConfigUI();
+  document.getElementById('config-banner').classList.remove('hidden');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const loadText = document.getElementById('loading-text');
+  const overlay = document.getElementById('loading-overlay');
+
+  applyTheme();
+
+  if (isConfigured()) {
+    loadText.textContent = 'Syncing with Cloudflare...';
+    const ok = await loadFromWorker();
+    if (!ok) {
+      loadText.textContent = 'Sync failed — loading local backup';
+      // Try localStorage fallback
+      try {
+        const local = JSON.parse(localStorage.getItem('dinnerboard_local') || '{}');
+        state = { meals: {}, grocery: [], theme: 'light', ...local };
+      } catch {}
+    }
+  } else {
+    // No config — try localStorage fallback
+    try {
+      const local = JSON.parse(localStorage.getItem('dinnerboard_local') || '{}');
+      if (local.meals || local.grocery) {
+        state = { meals: {}, grocery: [], theme: 'light', ...local };
+      }
+    } catch {}
+    document.getElementById('config-banner').classList.remove('hidden');
+  }
+
+  applyTheme();
+  renderCalendar();
+  overlay.classList.add('hidden');
+  setTimeout(() => overlay.remove(), 500);
+}
+
+init();
+</script>
+</body>
+</html>
