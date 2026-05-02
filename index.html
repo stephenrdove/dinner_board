@@ -283,6 +283,8 @@
     transition: opacity 0.15s;
   }
   .day-card:hover .edit-hint { opacity: 1; }
+  .day-card.dragging { opacity: 0.35; cursor: grabbing; }
+  .day-card.drag-over { outline: 2px dashed var(--accent); background: var(--accent-light); }
 
   /* GROCERY */
   .grocery-section { padding: 6px 0; }
@@ -585,14 +587,11 @@
         <span class="panel-title">Two-Week Meal Plan</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost" onclick="shiftWeeks(-1)">← Prev</button>
-          <button class="btn btn-ghost" id="period-label" onclick="goToToday()">This Fortnight</button>
+          <button class="btn btn-ghost" id="period-label" onclick="goToToday()">This Week</button>
           <button class="btn btn-ghost" onclick="shiftWeeks(1)">Next →</button>
         </div>
       </div>
-      <div class="week-label">Week 1</div>
       <div class="day-grid" id="week1-grid"></div>
-      <div class="week-label" style="border-top:1px solid var(--border)">Week 2</div>
-      <div class="day-grid" id="week2-grid"></div>
     </div>
   </div>
 
@@ -750,6 +749,8 @@ let state = { meals: {}, grocery: [], theme: 'light' };
 let currentEditKey = null;
 let fortnightOffset = 0;
 let saveTimer = null;
+let dragSourceKey = null;
+let dragDidMove = false;
 
 // ─── SYNC ─────────────────────────────────────────────────────────────────────
 function workerUrl() {
@@ -849,12 +850,12 @@ function showView(name) {
 // ─── CALENDAR ─────────────────────────────────────────────────────────────────
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function getFortnightStart() {
+function getWeekStart() {
   const today = new Date();
   today.setHours(0,0,0,0);
   const sunday = new Date(today);
   sunday.setDate(today.getDate() - today.getDay());
-  sunday.setDate(sunday.getDate() + fortnightOffset * 14);
+  sunday.setDate(sunday.getDate() + fortnightOffset * 7);
   return sunday;
 }
 
@@ -863,13 +864,13 @@ function goToToday() { fortnightOffset = 0; renderCalendar(); }
 function shiftWeeks(dir) { fortnightOffset += dir; renderCalendar(); }
 
 function renderCalendar() {
-  const start = getFortnightStart();
+  const start = getWeekStart();
   const today = new Date(); today.setHours(0,0,0,0);
-  const end = new Date(start); end.setDate(end.getDate() + 13);
+  const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
   document.getElementById('period-label').textContent = `${fmt(start)} – ${fmt(end)}`;
 
-  ['week1-grid','week2-grid'].forEach((gridId, weekIdx) => {
+  ['week1-grid'].forEach((gridId, weekIdx) => {
     const grid = document.getElementById(gridId);
     grid.innerHTML = '';
     for (let d = 0; d < 7; d++) {
@@ -894,7 +895,41 @@ function renderCalendar() {
         ${mealText}${noteText}
         <span class="edit-hint">✎ edit</span>
       `;
-      card.onclick = () => openModal(key, date);
+      card.draggable = true;
+      card.addEventListener('dragstart', e => {
+        dragSourceKey = key;
+        dragDidMove = false;
+        setTimeout(() => card.classList.add('dragging'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+      });
+      card.addEventListener('dragenter', e => {
+        e.preventDefault();
+        if (dragSourceKey !== key) card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', () => {
+        card.classList.remove('drag-over');
+      });
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        if (!dragSourceKey || dragSourceKey === key) return;
+        const a = state.meals[dragSourceKey] ? { ...state.meals[dragSourceKey] } : null;
+        const b = state.meals[key] ? { ...state.meals[key] } : null;
+        if (a) state.meals[key] = a; else delete state.meals[key];
+        if (b) state.meals[dragSourceKey] = b; else delete state.meals[dragSourceKey];
+        dragDidMove = true;
+        dragSourceKey = null;
+        scheduleSave();
+        renderCalendar();
+      });
+      card.onclick = () => { if (!dragDidMove) openModal(key, date); dragDidMove = false; };
       grid.appendChild(card);
     }
   });
